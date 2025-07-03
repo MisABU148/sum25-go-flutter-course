@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'chat_service.dart';
 
@@ -46,7 +48,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await widget.chatService.sendMessage(text);
       _controller.clear();
-      setState(() {}); // Update UI after clearing input
+      setState(() {}); // Обновить UI после очистки поля ввода
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Send failed: $e')),
@@ -60,7 +62,6 @@ class _ChatScreenState extends State<ChatScreen> {
       future: _connectFuture,
       builder: (context, snapshot) {
         if (_error != null) {
-          // Show error state if connection failed
           return Center(
             child: Text(
               _error!,
@@ -70,52 +71,13 @@ class _ChatScreenState extends State<ChatScreen> {
         }
 
         if (snapshot.connectionState != ConnectionState.done) {
-          // Show loading spinner while connecting
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Connected - show chat UI with message list and input
         return Column(
           children: [
             Expanded(
-              child: StreamBuilder<String>(
-                stream: widget.chatService.messageStream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Stream error: ${snapshot.error}',
-                        style:
-                            const TextStyle(color: Colors.red, fontSize: 16),
-                      ),
-                    );
-                  }
-
-                  if (!snapshot.hasData) {
-                    // Show placeholder if no messages yet
-                    return const Center(
-                      child: Text(
-                        'No messages yet',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    );
-                  }
-
-                  // We will accumulate messages in a list for display
-                  // However, StreamBuilder only has latest event,
-                  // so to keep messages we must manage a local list.
-                  // But the test expects message text to appear,
-                  // so we'll keep it simple: show all messages received so far.
-
-                  // Use a ListView builder fed by snapshot.data in a simple way:
-                  // Actually, since we have only one latest message, let's accumulate
-                  // messages in a List<String> in state.
-
-                  // We'll fix this by using a List<String> _messages in state.
-
-                  return _MessagesList();
-                },
-              ),
+              child: _MessagesList(chatService: widget.chatService),
             ),
             _MessageInput(
               controller: _controller,
@@ -128,32 +90,48 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-// Helper widget to manage and display message list inside StreamBuilder
 class _MessagesList extends StatefulWidget {
+  final ChatService chatService;
+
+  const _MessagesList({Key? key, required this.chatService}) : super(key: key);
+
   @override
   State<_MessagesList> createState() => _MessagesListState();
 }
 
 class _MessagesListState extends State<_MessagesList> {
   final List<String> _messages = [];
+  late final StreamSubscription<String> _subscription;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Listen to message stream from nearest ChatScreen widget
-    final chatService = (context.findAncestorWidgetOfExactType<ChatScreen>())!
-        .chatService;
-    chatService.messageStream.listen((msg) {
+  void initState() {
+    super.initState();
+    _subscription = widget.chatService.messageStream.listen((msg) {
       setState(() {
         _messages.add(msg);
       });
     }, onError: (e) {
-      // ignore errors here for simplicity
+      // Игнорируем ошибки для простоты
     });
   }
 
   @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_messages.isEmpty) {
+      return const Center(
+        child: Text(
+          'No messages yet',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: _messages.length,
@@ -166,15 +144,15 @@ class _MessagesListState extends State<_MessagesList> {
   }
 }
 
-// Widget for message input and send button
 class _MessageInput extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
 
   const _MessageInput({
+    Key? key,
     required this.controller,
     required this.onSend,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
