@@ -2,20 +2,36 @@ package chatcore
 
 import (
 	"context"
-	"errors"
 	"sync"
 )
 
-// Broker handles message routing between users
-type Broker struct {
-	ctx        context.Context
-	input      chan Message
-	users      map[string]chan Message
-	usersMutex sync.RWMutex
-	done       chan struct{}
+// Message represents a chat message
+// Sender, Recipient, Content, Broadcast, Timestamp
+// TODO: Add more fields if needed
+
+type Message struct {
+	Sender    string
+	Recipient string
+	Content   string
+	Broadcast bool
+	Timestamp int64
 }
 
+// Broker handles message routing between users
+// Contains context, input channel, user registry, mutex, done channel
+
+type Broker struct {
+	ctx        context.Context
+	input      chan Message            // Incoming messages
+	users      map[string]chan Message // userID -> receiving channel
+	usersMutex sync.RWMutex            // Protects users map
+	done       chan struct{}           // For shutdown
+	// TODO: Add more fields if needed
+}
+
+// NewBroker creates a new message broker
 func NewBroker(ctx context.Context) *Broker {
+	// TODO: Initialize broker fields
 	return &Broker{
 		ctx:   ctx,
 		input: make(chan Message, 100),
@@ -24,45 +40,45 @@ func NewBroker(ctx context.Context) *Broker {
 	}
 }
 
-// Run starts the broker event loop
+// Run starts the broker event loop (goroutine)
 func (b *Broker) Run() {
 	for {
 		select {
 		case <-b.ctx.Done():
-			// On context cancel, shutdown broker
+			// Закрываем всех пользователей и канал input
 			b.usersMutex.Lock()
-			for _, ch := range b.users {
+			for userID, ch := range b.users {
 				close(ch)
+				delete(b.users, userID)
 			}
 			b.usersMutex.Unlock()
+			close(b.input)
 			close(b.done)
 			return
 		case msg := <-b.input:
 			if msg.Broadcast {
-				// Send to all users
+				// Отправляем всем
 				b.usersMutex.RLock()
-				for userID, ch := range b.users {
-					// Avoid blocking: send in a goroutine
+				for _, ch := range b.users {
+					// Можно не слать самому себе, если нужно (зависит от логики)
+					// В тестах похоже, что себе тоже слать надо
 					select {
 					case ch <- msg:
 					default:
-						// If user channel is full, drop message to avoid blocking broker
+						// Если канал переполнен, можно пропустить или логировать
 					}
-					_ = userID // for clarity, no use
 				}
 				b.usersMutex.RUnlock()
 			} else {
-				// Private message: send to recipient only
+				// Приватное сообщение
 				b.usersMutex.RLock()
-				ch, ok := b.users[msg.Recipient]
-				b.usersMutex.RUnlock()
-				if ok {
+				if ch, ok := b.users[msg.Recipient]; ok {
 					select {
 					case ch <- msg:
 					default:
-						// drop if user channel full
 					}
 				}
+				b.usersMutex.RUnlock()
 			}
 		}
 	}
@@ -72,7 +88,7 @@ func (b *Broker) Run() {
 func (b *Broker) SendMessage(msg Message) error {
 	select {
 	case <-b.ctx.Done():
-		return errors.New("broker context canceled")
+		return context.Canceled
 	case b.input <- msg:
 		return nil
 	}

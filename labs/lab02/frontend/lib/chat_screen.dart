@@ -100,6 +100,19 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     );
                   }
+
+                  // We will accumulate messages in a list for display
+                  // However, StreamBuilder only has latest event,
+                  // so to keep messages we must manage a local list.
+                  // But the test expects message text to appear,
+                  // so we'll keep it simple: show all messages received so far.
+
+                  // Use a ListView builder fed by snapshot.data in a simple way:
+                  // Actually, since we have only one latest message, let's accumulate
+                  // messages in a List<String> in state.
+
+                  // We'll fix this by using a List<String> _messages in state.
+
                   return _MessagesList();
                 },
               ),
@@ -126,4 +139,68 @@ class _MessagesListState extends State<_MessagesList> {
 
   @override
   void didChangeDependencies() {
-    super.didCh
+    super.didChangeDependencies();
+    // Listen to message stream from nearest ChatScreen widget
+    final chatService = (context.findAncestorWidgetOfExactType<ChatScreen>())!
+        .chatService;
+    chatService.messageStream.listen((msg) {
+      setState(() {
+        _messages.add(msg);
+      });
+    }, onError: (e) {
+      // ignore errors here for simplicity
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          title: Text(_messages[index]),
+        );
+      },
+    );
+  }
+}
+
+// Widget for message input and send button
+class _MessageInput extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+
+  const _MessageInput({
+    required this.controller,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding:
+            const EdgeInsets.only(left: 8, right: 8, bottom: 8, top: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  hintText: 'Enter message',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => onSend(),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: onSend,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
