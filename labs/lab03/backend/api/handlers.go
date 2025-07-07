@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"lab03-backend/models"
 	"lab03-backend/storage"
 	"net/http"
@@ -33,6 +34,7 @@ func (h *Handler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/messages/{id}", h.UpdateMessage).Methods("PUT")
 	api.HandleFunc("/messages/{id}", h.DeleteMessage).Methods("DELETE")
 	api.HandleFunc("/status/{code}", h.GetHTTPStatus).Methods("GET")
+	api.HandleFunc("/cat/{code}", h.ProxyHTTPStatusImage).Methods("GET")
 	api.HandleFunc("/health", h.HealthCheck).Methods("GET")
 
 	return router
@@ -109,6 +111,23 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ProxyHTTPStatusImage handles GET /api/cat/{code}
+func (h *Handler) ProxyHTTPStatusImage(w http.ResponseWriter, r *http.Request) {
+	code := mux.Vars(r)["code"]
+	url := fmt.Sprintf("https://http.cat/%s", code)
+
+	resp, err := http.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "Image not found", http.StatusNotFound)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
 }
 
 func getBaseURL(r *http.Request) string {
@@ -199,7 +218,11 @@ func getHTTPStatusDescription(code int) string {
 // CORS middleware
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin == "http://localhost:3000" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
