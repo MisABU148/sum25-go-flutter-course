@@ -11,19 +11,38 @@ class Message {
     required this.timestamp,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json) => Message(
-        id: json['id'] as int,
-        username: json['username'] as String,
-        content: json['content'] as String,
-        timestamp: DateTime.parse(json['timestamp'] as String),
-      );
+  factory Message.fromJson(Map<String, dynamic> json) {
+    return Message(
+      id: json['id'] as int,
+      username: json['username'] as String,
+      content: json['content'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': username,
-        'content': content,
-        'timestamp': timestamp.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'content': content,
+      'timestamp': timestamp.toIso8601String(),
+    };
+  }
+
+  // Для удобства обновления части данных (например content)
+  Message copyWith({
+    int? id,
+    String? username,
+    String? content,
+    DateTime? timestamp,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
 }
 
 class CreateMessageRequest {
@@ -35,14 +54,16 @@ class CreateMessageRequest {
     required this.content,
   });
 
-  Map<String, dynamic> toJson() => {
-        'username': username,
-        'content': content,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'content': content,
+    };
+  }
 
   String? validate() {
-    if (username.isEmpty) return 'Username is required';
-    if (content.isEmpty) return 'Content is required';
+    if (username.trim().isEmpty) return "Username is required";
+    if (content.trim().isEmpty) return "Content is required";
     return null;
   }
 }
@@ -50,14 +71,18 @@ class CreateMessageRequest {
 class UpdateMessageRequest {
   final String content;
 
-  UpdateMessageRequest({required this.content});
+  UpdateMessageRequest({
+    required this.content,
+  });
 
-  Map<String, dynamic> toJson() => {
-        'content': content,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'content': content,
+    };
+  }
 
   String? validate() {
-    if (content.isEmpty) return 'Content is required';
+    if (content.trim().isEmpty) return "Content is required";
     return null;
   }
 }
@@ -73,12 +98,13 @@ class HTTPStatusResponse {
     required this.description,
   });
 
-  factory HTTPStatusResponse.fromJson(Map<String, dynamic> json) =>
-      HTTPStatusResponse(
-        statusCode: json['status_code'] as int,
-        imageUrl: json['image_url'] as String,
-        description: json['description'] as String,
-      );
+  factory HTTPStatusResponse.fromJson(Map<String, dynamic> json) {
+    return HTTPStatusResponse(
+      statusCode: json['status_code'] as int,
+      imageUrl: json['image_url'] as String,
+      description: json['description'] as String,
+    );
+  }
 }
 
 class ApiResponse<T> {
@@ -93,14 +119,11 @@ class ApiResponse<T> {
   });
 
   factory ApiResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Map<String, dynamic>)? fromJsonT,
-  ) {
-    final dataJson = json['data'];
+      Map<String, dynamic> json, T Function(Map<String, dynamic>)? fromJsonT) {
     return ApiResponse<T>(
       success: json['success'] as bool,
-      data: dataJson != null && fromJsonT != null
-          ? fromJsonT(dataJson as Map<String, dynamic>)
+      data: json['data'] != null && fromJsonT != null
+          ? fromJsonT(json['data'] as Map<String, dynamic>)
           : null,
       error: json['error'] as String?,
     );

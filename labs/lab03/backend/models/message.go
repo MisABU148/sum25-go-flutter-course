@@ -15,13 +15,13 @@ type Message struct {
 
 // CreateMessageRequest represents the request to create a new message
 type CreateMessageRequest struct {
-	Username string `json:"username"`
-	Content  string `json:"content"`
+	Username string `json:"username" validate:"required"`
+	Content  string `json:"content" validate:"required"`
 }
 
 // UpdateMessageRequest represents the request to update a message
 type UpdateMessageRequest struct {
-	Content string `json:"content"`
+	Content string `json:"content" validate:"required"`
 }
 
 // HTTPStatusResponse represents the response for HTTP status code endpoint

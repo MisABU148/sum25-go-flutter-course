@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/chat_screen.dart';
 import 'services/api_service.dart';
-import 'models/message.dart';
+import 'models/message.dart';  // если нужно для типов
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
-        Provider<ApiService>(create: (_) => ApiService()),
-        ChangeNotifierProvider<ChatProvider>(
+        Provider<ApiService>(
+          create: (_) => ApiService(),
+          dispose: (_, api) => api.dispose(),
+        ),
+        ChangeNotifierProxyProvider<ApiService, ChatProvider>(
           create: (context) => ChatProvider(context.read<ApiService>()),
+          update: (context, api, previous) => previous!..updateApiService(api),
         ),
       ],
       child: const MyApp(),
@@ -19,26 +23,28 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Lab 03 REST API Chat',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
-            .copyWith(secondary: Colors.orange),
-        appBarTheme: const AppBarTheme(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          secondary: Colors.orange,
+        ),
+        useMaterial3: true,
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
           ),
         ),
-        useMaterial3: true,
       ),
       home: const ChatScreen(),
     );
@@ -46,12 +52,17 @@ class MyApp extends StatelessWidget {
 }
 
 class ChatProvider extends ChangeNotifier {
-  final ApiService _apiService;
+  late ApiService _apiService;
+
   List<Message> _messages = [];
   bool _isLoading = false;
   String? _error;
 
   ChatProvider(this._apiService);
+
+  void updateApiService(ApiService apiService) {
+    _apiService = apiService;
+  }
 
   List<Message> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -63,41 +74,32 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final fetchedMessages = await _apiService.getMessages();
-      _messages = fetchedMessages;
+      _messages = await _apiService.getMessages();
     } catch (e) {
-      _error = 'Failed to load messages';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      _error = e.toString();
     }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   Future<void> createMessage(CreateMessageRequest request) async {
-    final validationError = request.validate();
-    if (validationError != null) {
-      _error = validationError;
-      notifyListeners();
-      return;
-    }
+    _error = null;
+    notifyListeners();
 
     try {
-      final newMessage = await _apiService.createMessage(request);
-      _messages.add(newMessage);
-      _error = null;
+      final message = await _apiService.createMessage(request);
+      _messages.insert(0, message);
     } catch (e) {
-      _error = 'Failed to create message';
+      _error = e.toString();
     }
+
     notifyListeners();
   }
 
   Future<void> updateMessage(int id, UpdateMessageRequest request) async {
-    final validationError = request.validate();
-    if (validationError != null) {
-      _error = validationError;
-      notifyListeners();
-      return;
-    }
+    _error = null;
+    notifyListeners();
 
     try {
       final updatedMessage = await _apiService.updateMessage(id, request);
@@ -105,26 +107,30 @@ class ChatProvider extends ChangeNotifier {
       if (index != -1) {
         _messages[index] = updatedMessage;
       }
-      _error = null;
     } catch (e) {
-      _error = 'Failed to update message';
+      _error = e.toString();
     }
+
     notifyListeners();
   }
 
   Future<void> deleteMessage(int id) async {
+    _error = null;
+    notifyListeners();
+
     try {
       await _apiService.deleteMessage(id);
       _messages.removeWhere((m) => m.id == id);
-      _error = null;
     } catch (e) {
-      _error = 'Failed to delete message';
+      _error = e.toString();
     }
+
     notifyListeners();
   }
 
   Future<void> refreshMessages() async {
     _messages.clear();
+    notifyListeners();
     await loadMessages();
   }
 

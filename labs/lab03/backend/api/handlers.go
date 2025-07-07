@@ -111,6 +111,14 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func getBaseURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s", scheme, r.Host)
+}
+
 // GetHTTPStatus handles GET /api/status/{code}
 func (h *Handler) GetHTTPStatus(w http.ResponseWriter, r *http.Request) {
 	codeStr := mux.Vars(r)["code"]
@@ -123,7 +131,7 @@ func (h *Handler) GetHTTPStatus(w http.ResponseWriter, r *http.Request) {
 	description := getHTTPStatusDescription(code)
 	status := models.HTTPStatusResponse{
 		StatusCode:  code,
-		ImageURL:    fmt.Sprintf("https://http.cat/%d", code),
+		ImageURL:    fmt.Sprintf("%s/api/cat/%d", getBaseURL(r), code),
 		Description: description,
 	}
 
@@ -136,7 +144,7 @@ func (h *Handler) GetHTTPStatus(w http.ResponseWriter, r *http.Request) {
 // HealthCheck handles GET /api/health
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, map[string]interface{}{
-		"status":         "ok",
+		"status":         "healthy",
 		"message":        "API is running",
 		"timestamp":      time.Now().Format(time.RFC3339),
 		"total_messages": h.storage.Count(),
