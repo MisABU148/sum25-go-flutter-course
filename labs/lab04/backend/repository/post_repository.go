@@ -25,8 +25,8 @@ func (r *PostRepository) Create(req *models.CreatePostRequest) (*models.Post, er
 	}
 
 	query := `
-		INSERT INTO posts (title, content, user_id, category_id, published, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		INSERT INTO posts (title, content, user_id, published, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
 		RETURNING *;
 	`
 
@@ -35,7 +35,6 @@ func (r *PostRepository) Create(req *models.CreatePostRequest) (*models.Post, er
 		req.Title,
 		req.Content,
 		req.UserID,
-		req.CategoryID,
 		req.Published,
 	)
 
@@ -83,7 +82,6 @@ func (r *PostRepository) GetAll() ([]models.Post, error) {
 }
 
 func (r *PostRepository) Update(id int, req *models.UpdatePostRequest) (*models.Post, error) {
-	// Построим динамический запрос на основе непустых полей
 	set := []string{}
 	args := []interface{}{}
 	argID := 1
@@ -98,23 +96,18 @@ func (r *PostRepository) Update(id int, req *models.UpdatePostRequest) (*models.
 		args = append(args, *req.Content)
 		argID++
 	}
-	if req.CategoryID != nil {
-		set = append(set, fmt.Sprintf("category_id = $%d", argID))
-		args = append(args, *req.CategoryID)
-		argID++
-	}
+	// Убираем CategoryID, его нет в модели
 	if req.Published != nil {
 		set = append(set, fmt.Sprintf("published = $%d", argID))
 		args = append(args, *req.Published)
 		argID++
 	}
 
-	// добавим updated_at
 	set = append(set, fmt.Sprintf("updated_at = $%d", argID))
 	args = append(args, time.Now())
 	argID++
 
-	args = append(args, id) // последний аргумент — это id
+	args = append(args, id)
 
 	query := fmt.Sprintf(`
 		UPDATE posts
