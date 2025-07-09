@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -48,33 +49,33 @@ func (p *Post) Validate() error {
 // TODO: Implement Validate method for CreatePostRequest
 func (req *CreatePostRequest) Validate() error {
 	if req.UserID <= 0 {
-        return errors.New("user_id must be greater than 0")
-    }
-    if len(req.Title) < 5 {
-        return errors.New("title must be at least 5 characters")
-    }
-    if req.Published && req.Content == "" {
-        return errors.New("published posts must have content")
-    }
-    return nil
+		return errors.New("user_id must be greater than 0")
+	}
+	if len(req.Title) < 5 {
+		return errors.New("title must be at least 5 characters")
+	}
+	if req.Published && req.Content == "" {
+		return errors.New("published posts must have content")
+	}
+	return nil
 }
 
 // TODO: Implement ToPost method for CreatePostRequest
 func (req *CreatePostRequest) ToPost() *Post {
 	now := time.Now()
-    return &Post{
-        UserID:    req.UserID,
-        Title:     req.Title,
-        Content:   req.Content,
-        Published: req.Published,
-        CreatedAt: now,
-        UpdatedAt: now,
-    }
+	return &Post{
+		UserID:    req.UserID,
+		Title:     req.Title,
+		Content:   req.Content,
+		Published: req.Published,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
 }
 
 // TODO: Implement ScanRow method for Post
 func (p *Post) ScanRow(row *sql.Row) error {
-    if row == nil {
+	if row == nil {
 		return errors.New("row is nil")
 	}
 	return row.Scan(

@@ -1,8 +1,10 @@
 package models
 
 import (
+	"log"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -52,9 +54,9 @@ func (c *Category) BeforeCreate(tx *gorm.DB) error {
 	// - Perform any pre-creation logic
 	// Example: if c.Color == "" { c.Color = "#007bff" }
 	if c.Color == "" {
-        c.Color = "#007bff"
-    }
-    return nil
+		c.Color = "#007bff"
+	}
+	return nil
 }
 
 // TODO: Implement AfterCreate hook
@@ -75,8 +77,8 @@ func (c *Category) BeforeUpdate(tx *gorm.DB) error {
 	// - Prevent certain updates
 	// - Clean up related data
 	if c.Name == "" {
-        return gorm.ErrInvalidData
-    }
+		return gorm.ErrInvalidData
+	}
 	return nil
 }
 
@@ -89,23 +91,23 @@ func (req *CreateCategoryRequest) Validate() error {
 	// Example using validator package:
 	// return validator.New().Struct(req)
 	validate := validator.New()
-        _ = validate.RegisterValidation("hexcolor", func(fl validator.FieldLevel) bool {
-        val := fl.Field().String()
-        if val == "" {
-            return true
-        }
-        if len(val) != 7 || val[0] != '#' {
-            return false
-        }
-        for _, c := range val[1:] {
-            if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-                return false
-            }
-        }
-        return true
-    })
+	_ = validate.RegisterValidation("hexcolor", func(fl validator.FieldLevel) bool {
+		val := fl.Field().String()
+		if val == "" {
+			return true
+		}
+		if len(val) != 7 || val[0] != '#' {
+			return false
+		}
+		for _, c := range val[1:] {
+			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+				return false
+			}
+		}
+		return true
+	})
 
-    return validate.Struct(req)
+	return validate.Struct(req)
 }
 
 // TODO: Implement ToCategory method
@@ -121,11 +123,11 @@ func (req *CreateCategoryRequest) ToCategory() *Category {
 	//     Active:      true,
 	// }
 	return &Category{
-        Name:        req.Name,
-        Description: req.Description,
-        Color:       req.Color,
-        Active:      true,
-    }
+		Name:        req.Name,
+		Description: req.Description,
+		Color:       req.Color,
+		Active:      true,
+	}
 }
 
 // TODO: Implement GORM scopes (reusable query logic)
@@ -139,8 +141,8 @@ func CategoriesWithPosts(db *gorm.DB) *gorm.DB {
 	// TODO: GORM scope for categories with posts
 	// return db.Joins("Posts").Where("posts.id IS NOT NULL")
 	return db.Joins("JOIN post_categories ON categories.id = post_categories.category_id").
-    		Joins("JOIN posts ON posts.id = post_categories.post_id").
-    		Group("categories.id")
+		Joins("JOIN posts ON posts.id = post_categories.post_id").
+		Group("categories.id")
 }
 
 // TODO: Implement model validation methods
@@ -155,9 +157,9 @@ func (c *Category) PostCount(db *gorm.DB) (int64, error) {
 	// err := db.Model(c).Association("Posts").Count(&count)
 	// return count, err
 	var count int64
-    err := db.Model(&Post{}).
-        Joins("JOIN post_categories ON posts.id = post_categories.post_id").
-        Where("post_categories.category_id = ?", c.ID).
-        Count(&count).Error
-    return count, err
+	err := db.Model(&Post{}).
+		Joins("JOIN post_categories ON posts.id = post_categories.post_id").
+		Where("post_categories.category_id = ?", c.ID).
+		Count(&count).Error
+	return count, err
 }

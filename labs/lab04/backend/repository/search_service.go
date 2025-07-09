@@ -8,6 +8,7 @@ import (
 	"lab04-backend/models"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/georgysavva/scany/sqlscan"
 )
 
 // SearchService handles dynamic search operations using Squirrel query builder
@@ -40,55 +41,55 @@ func NewSearchService(db *sql.DB) *SearchService {
 // TODO: Implement SearchPosts method using Squirrel query builder
 func (s *SearchService) SearchPosts(ctx context.Context, filters SearchFilters) ([]models.Post, error) {
 	query := s.psql.
-        Select("id", "user_id", "title", "content", "published", "created_at", "updated_at").
-        From("posts")
+		Select("id", "user_id", "title", "content", "published", "created_at", "updated_at").
+		From("posts")
 
-    // WHERE
-    if filters.Query != "" {
-        search := "%" + filters.Query + "%"
-        query = query.Where(squirrel.Or{
-            squirrel.ILike{"title": search},
-            squirrel.ILike{"content": search},
-        })
-    }
-    if filters.UserID != nil {
-        query = query.Where(squirrel.Eq{"user_id": *filters.UserID})
-    }
-    if filters.Published != nil {
-        query = query.Where(squirrel.Eq{"published": *filters.Published})
-    }
-    if filters.MinWordCount != nil {
-        query = query.Where("length(content) - length(replace(content, ' ', '')) + 1 >= ?", *filters.MinWordCount)
-    }
+	// WHERE
+	if filters.Query != "" {
+		search := "%" + filters.Query + "%"
+		query = query.Where(squirrel.Or{
+			squirrel.ILike{"title": search},
+			squirrel.ILike{"content": search},
+		})
+	}
+	if filters.UserID != nil {
+		query = query.Where(squirrel.Eq{"user_id": *filters.UserID})
+	}
+	if filters.Published != nil {
+		query = query.Where(squirrel.Eq{"published": *filters.Published})
+	}
+	if filters.MinWordCount != nil {
+		query = query.Where("length(content) - length(replace(content, ' ', '')) + 1 >= ?", *filters.MinWordCount)
+	}
 
-    // ORDER BY
-    orderField := filters.OrderBy
-    if orderField == "" {
-        orderField = "created_at"
-    }
-    orderDir := filters.OrderDir
-    if orderDir != "DESC" {
-        orderDir = "ASC"
-    }
-    query = query.OrderBy(fmt.Sprintf("%s %s", orderField, orderDir))
+	// ORDER BY
+	orderField := filters.OrderBy
+	if orderField == "" {
+		orderField = "created_at"
+	}
+	orderDir := filters.OrderDir
+	if orderDir != "DESC" {
+		orderDir = "ASC"
+	}
+	query = query.OrderBy(fmt.Sprintf("%s %s", orderField, orderDir))
 
-    // LIMIT & OFFSET
-    if filters.Limit <= 0 {
-        filters.Limit = 50
-    }
-    query = query.Limit(uint64(filters.Limit)).Offset(uint64(filters.Offset))
+	// LIMIT & OFFSET
+	if filters.Limit <= 0 {
+		filters.Limit = 50
+	}
+	query = query.Limit(uint64(filters.Limit)).Offset(uint64(filters.Offset))
 
-    sqlStr, args, err := query.ToSql()
-    if err != nil {
-        return nil, err
-    }
+	sqlStr, args, err := query.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
-    var posts []models.Post
-    if err := sqlscan.Select(ctx, s.db, &posts, sqlStr, args...); err != nil {
-        return nil, err
-    }
+	var posts []models.Post
+	if err := sqlscan.Select(ctx, s.db, &posts, sqlStr, args...); err != nil {
+		return nil, err
+	}
 
-    return posts, nil
+	return posts, nil
 }
 
 // TODO: Implement SearchUsers method using Squirrel
@@ -112,7 +113,6 @@ func (s *SearchService) SearchUsers(ctx context.Context, nameQuery string, limit
 
 	return users, nil
 }
-
 
 // TODO: Implement GetPostStats method using Squirrel with JOINs
 func (s *SearchService) GetPostStats(ctx context.Context) (*PostStats, error) {
@@ -138,7 +138,6 @@ func (s *SearchService) GetPostStats(ctx context.Context) (*PostStats, error) {
 
 	return &stats, nil
 }
-
 
 // PostStats represents aggregated post statistics
 type PostStats struct {
@@ -198,7 +197,6 @@ func (s *SearchService) GetTopUsers(ctx context.Context, limit int) ([]UserWithS
 
 	return result, nil
 }
-
 
 // UserWithStats represents a user with post statistics
 type UserWithStats struct {

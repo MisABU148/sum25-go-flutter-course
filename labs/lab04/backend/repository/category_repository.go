@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"fmt"
-
 	"lab04-backend/models"
 
 	"gorm.io/gorm"

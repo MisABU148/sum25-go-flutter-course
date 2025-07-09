@@ -66,6 +66,26 @@ class User {
       return 'User(id: $id, name: $name, email: $email, '
           'createdAt: $createdAt, updatedAt: $updatedAt)';
     }
+
+    factory User.fromMap(Map<String, dynamic> map) {
+      return User(
+        id: map['id'] as int,
+        name: map['name'] as String,
+        email: map['email'] as String,
+        createdAt: DateTime.parse(map['created_at'] as String),
+        updatedAt: DateTime.parse(map['updated_at'] as String),
+      );
+    }
+
+    Map<String, dynamic> toMap() {
+      return {
+        'id': id,
+        'name': name,
+        'email': email,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+    }
 }
 
 @JsonSerializable()
