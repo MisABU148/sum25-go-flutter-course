@@ -36,7 +36,7 @@ class FormValidator {
     final hasNumber = RegExp(r'\d').hasMatch(password);
 
     if (!hasLetter || !hasNumber) {
-      return 'Password must contain at least one letter and one number';
+      return 'Password must contain at least one letter and number';
     }
 
     return null; // valid password
@@ -44,9 +44,10 @@ class FormValidator {
 
   /// sanitizeText
   static String sanitizeText(String? text) {
-    if (text == null) return '';
-    return text.replaceAll('<', '').replaceAll('>', '').trim();
-  }
+  if (text == null) return '';
+  final withoutTags = text.replaceAll(RegExp(r'<[^>]*>'), '');
+  return withoutTags.trim();
+}
 
   /// isValidLength
   static bool isValidLength(String? text,
