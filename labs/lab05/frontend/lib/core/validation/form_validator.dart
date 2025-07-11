@@ -9,12 +9,14 @@ class FormValidator {
 
     final trimmedEmail = email.trim();
 
-    if (!trimmedEmail.contains('@') || !trimmedEmail.contains('.')) {
-      return 'Invalid email format';
+    // Простая проверка на формат email
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    if (!emailRegex.hasMatch(trimmedEmail)) {
+      return 'Email format is invalid';
     }
 
     if (trimmedEmail.length > 100) {
-      return 'Email must be less than 100 characters';
+      return 'Email is too long';
     }
 
     return null; // valid email
@@ -34,7 +36,7 @@ class FormValidator {
     final hasNumber = RegExp(r'\d').hasMatch(password);
 
     if (!hasLetter || !hasNumber) {
-      return 'Password must contain letters and numbers';
+      return 'Password must contain at least one letter and one number';
     }
 
     return null; // valid password
@@ -54,4 +56,3 @@ class FormValidator {
     return length >= minLength && length <= maxLength;
   }
 }
-

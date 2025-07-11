@@ -79,7 +79,6 @@ class AuthService {
   // Get current user
   User? get currentUser => _currentState.currentUser;
 
-  @override
   Future<AuthResult> login(String email, String password) async {
     try {
       // Validate inputs
@@ -124,12 +123,10 @@ class AuthService {
     }
   }
 
-  @override
   Future<void> logout() async {
     _currentState = const AuthState(); // Clear all authentication data
   }
 
-  @override
   bool isSessionValid() {
     if (!_currentState.isAuthenticated || _currentState.loginTime == null) {
       return false;
@@ -139,7 +136,6 @@ class AuthService {
     return duration.inHours < 24;
   }
 
-  @override
   Future<bool> refreshAuth() async {
     try {
       if (!isSessionValid()) {
@@ -160,7 +156,6 @@ class AuthService {
     }
   }
 
-  @override
   Map<String, dynamic>? getUserInfo() {
     if (!isAuthenticated || currentUser == null) {
       return null;
